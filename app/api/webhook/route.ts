@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { doc, setDoc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2024-11-20.acacia",
-});
+import { stripe } from "@/lib/stripe";
+import { createPayment, updateUserData, getUserData } from "@/lib/firebaseUtils";
+import { sendEmail } from "@/lib/resend";
+import { paymentConfirmationEmail } from "@/emails/paymentConfirmation";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
 
@@ -31,21 +29,57 @@ export async function POST(request: NextRequest) {
     const userId = session.metadata?.userId || session.client_reference_id;
 
     if (userId) {
-      // Save payment to Firestore
-      await setDoc(doc(db, "payments", session.id), {
+      const amount = session.amount_total ? session.amount_total / 100 : 0;
+      const planId = session.metadata?.planId || "unknown";
+      
+      // Get plan name from planId
+      const planNames: Record<string, string> = {
+        [process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID || ""]: "Basic",
+        [process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || ""]: "Pro",
+        [process.env.NEXT_PUBLIC_STRIPE_ELITE_PRICE_ID || ""]: "Elite",
+      };
+      const planType = planNames[planId] || "Basic";
+
+      // Save payment to Firestore using utility
+      await createPayment({
         userId,
-        amount: session.amount_total ? session.amount_total / 100 : 0,
-        currency: session.currency,
-        status: "completed",
-        planId: session.metadata?.planId || "unknown",
-        createdAt: new Date().toISOString(),
+        planType,
+        amount,
+        stripeSessionId: session.id,
       });
 
       // Update user document
-      await updateDoc(doc(db, "users", userId), {
-        hasActivePlan: true,
-        lastPaymentDate: new Date().toISOString(),
+      await updateUserData(userId, {
+        planType,
+        planStatus: "Pending",
       });
+
+      // Get user data for email
+      const userData = await getUserData(userId);
+      if (userData) {
+        const userEmail = userData.email || session.customer_email;
+        const userName = userData.name || "User";
+
+        // Send payment confirmation email
+        if (userEmail) {
+          try {
+            const emailTemplate = paymentConfirmationEmail(
+              userName,
+              planType,
+              amount,
+              process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
+            );
+            await sendEmail({
+              to: userEmail,
+              subject: emailTemplate.subject,
+              html: emailTemplate.html,
+            });
+          } catch (emailError) {
+            console.error("Error sending payment confirmation email:", emailError);
+            // Don't fail webhook if email fails
+          }
+        }
+      }
     }
   }
 

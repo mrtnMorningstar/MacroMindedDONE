@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2024-11-20.acacia",
-});
+import { stripe } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +10,21 @@ export async function POST(request: NextRequest) {
         { error: "Missing required parameters" },
         { status: 400 }
       );
+    }
+
+    // Validate coupon if provided
+    let couponId = null;
+    if (coupon) {
+      try {
+        // Try to retrieve the coupon to validate it
+        const couponObj = await stripe.coupons.retrieve(coupon);
+        if (couponObj.valid) {
+          couponId = coupon;
+        }
+      } catch (error) {
+        // Coupon doesn't exist or is invalid, continue without it
+        console.log("Invalid coupon code:", coupon);
+      }
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -28,13 +39,15 @@ export async function POST(request: NextRequest) {
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/questionnaire?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/plans`,
       client_reference_id: userId,
-      ...(coupon && { discounts: [{ coupon }] }),
+      ...(couponId && { discounts: [{ coupon: couponId }] }),
       metadata: {
         userId,
+        planId: planId,
       },
+      allow_promotion_codes: true, // Allow Stripe promotion codes
     });
 
-    return NextResponse.json({ sessionId: session.id });
+    return NextResponse.json({ url: session.url });
   } catch (error: any) {
     console.error("Checkout error:", error);
     return NextResponse.json(

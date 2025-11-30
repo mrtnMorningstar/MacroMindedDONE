@@ -48,9 +48,13 @@ export async function sendPlanReadyEmail(email: string, name: string) {
   }
 }
 
-export async function sendAdminReplyEmail(email: string, name: string) {
+export async function sendAdminReplyEmail(
+  email: string, 
+  name: string, 
+  messagePreview?: string
+) {
   try {
-    const template = emailTemplates.adminReply(name);
+    const template = emailTemplates.adminReply(name, messagePreview);
     await resend.emails.send({
       from: "MacroMinded <onboarding@resend.dev>",
       to: email,

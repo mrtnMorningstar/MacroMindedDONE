@@ -123,9 +123,26 @@ After deployment, configure Stripe webhook:
 
 ## Admin Access
 
-To access the admin panel:
-1. Set `role: "admin"` in Firestore for your user document
-2. Or use the email configured in `ADMIN_EMAIL`
+To access the admin panel, you have three options:
+
+1. **Set Firebase Role (Recommended)**
+   - In Firestore, go to the `users` collection
+   - Find your user document
+   - Add or update the `role` field to `"admin"`
+
+2. **Use Admin Email**
+   - Set `ADMIN_EMAIL` in your `.env.local` file
+   - Use that email address to sign in
+
+3. **Default Admin Email**
+   - Use `admin@macrominded.com` (fallback option)
+
+**Note:** The admin panel checks all three methods. Once you have admin access, you can:
+- View all users with their plan status and payment info
+- Upload meal plans (text) to users
+- Reply to client messages via chat
+- Toggle user plan status (Pending, In Progress, Delivered)
+- Search users by name or email
 
 ## Support
 

@@ -1,4 +1,3 @@
-import { Resend } from "resend";
-
-export const resend = new Resend(process.env.RESEND_API_KEY);
+// Re-export from resend.ts for backward compatibility
+export { resend } from "@/lib/resend";
 
