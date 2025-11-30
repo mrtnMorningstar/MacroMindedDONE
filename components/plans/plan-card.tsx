@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,6 @@ export function PlanCard({ plan, index, coupon }: PlanCardProps) {
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const buttonRef = useRef<HTMLButtonElement>(null);
 
   // 3D Tilt Effect
   const x = useMotionValue(0);
@@ -66,8 +65,10 @@ export function PlanCard({ plan, index, coupon }: PlanCardProps) {
     // Don't interfere with button interactions - check target first
     const target = e.target as HTMLElement;
     const button = target.closest("button");
-    if (button || target.tagName === "BUTTON") {
-      // Reset tilt when over button
+    const footer = target.closest('[data-footer-area]');
+    
+    if (button || target.tagName === "BUTTON" || footer) {
+      // Reset tilt when over button or footer area
       x.set(0);
       y.set(0);
       return;
@@ -78,6 +79,14 @@ export function PlanCard({ plan, index, coupon }: PlanCardProps) {
     const height = rect.height;
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
+    
+    // Don't apply tilt if mouse is in bottom 35% (footer area)
+    if (mouseY / height > 0.65) {
+      x.set(0);
+      y.set(0);
+      return;
+    }
+    
     const xPct = mouseX / width - 0.5;
     const yPct = mouseY / height - 0.5;
     x.set(xPct);
@@ -149,50 +158,6 @@ export function PlanCard({ plan, index, coupon }: PlanCardProps) {
     }
   };
 
-  // Add direct event listener as fallback (after handleGetStarted is defined)
-  useEffect(() => {
-    const button = buttonRef.current;
-    if (!button) {
-      console.log("Button ref is null!");
-      return;
-    }
-
-    console.log("Setting up direct event listeners on button", button, button.outerHTML.substring(0, 100));
-
-    const handleClick = (e: MouseEvent) => {
-      console.log("DIRECT CLICK LISTENER FIRED!", e, { isProcessing });
-      e.preventDefault();
-      e.stopPropagation();
-      if (!isProcessing) {
-        handleGetStarted();
-      }
-    };
-
-    const handleMouseEnter = () => {
-      console.log("DIRECT HOVER LISTENER FIRED!");
-    };
-
-    const handlePointerEnter = () => {
-      console.log("DIRECT POINTER ENTER LISTENER FIRED!");
-    };
-
-    const handlePointerDown = (e: MouseEvent) => {
-      console.log("DIRECT POINTERDOWN LISTENER FIRED!", e);
-    };
-
-    button.addEventListener("click", handleClick, true);
-    button.addEventListener("mouseenter", handleMouseEnter, true);
-    button.addEventListener("pointerenter", handlePointerEnter, true);
-    button.addEventListener("pointerdown", handlePointerDown, true);
-
-    return () => {
-      button.removeEventListener("click", handleClick, true);
-      button.removeEventListener("mouseenter", handleMouseEnter, true);
-      button.removeEventListener("pointerenter", handlePointerEnter, true);
-      button.removeEventListener("pointerdown", handlePointerDown, true);
-    };
-  }, [isProcessing, plan.name, user?.uid]);
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 50 }}
@@ -204,18 +169,27 @@ export function PlanCard({ plan, index, coupon }: PlanCardProps) {
         stiffness: 100,
       }}
       className="relative"
-      onMouseMove={handleMouseMove}
+      onMouseMove={(e) => {
+        // Check if mouse is in footer area before handling
+        const rect = e.currentTarget.getBoundingClientRect();
+        const mouseY = e.clientY - rect.top;
+        const height = rect.height;
+        
+        // If mouse is in bottom 35% (footer area), don't handle tilt
+        if (mouseY / height > 0.65) {
+          const target = e.target as HTMLElement;
+          if (target.tagName === "BUTTON" || target.closest("button") || target.closest('[data-footer-area]')) {
+            e.stopPropagation();
+            return;
+          }
+        }
+        
+        handleMouseMove(e);
+      }}
       onMouseLeave={handleMouseLeave}
       onMouseEnter={() => setIsHovered(true)}
       style={{
         perspective: "1000px",
-      }}
-      onPointerDown={(e) => {
-        // Stop propagation for all pointer events except buttons
-        const target = e.target as HTMLElement;
-        if (target.tagName !== "BUTTON" && !target.closest("button")) {
-          e.stopPropagation();
-        }
       }}
     >
       {plan.popular && (
@@ -259,14 +233,6 @@ export function PlanCard({ plan, index, coupon }: PlanCardProps) {
               ? "border-[#FF2E2E] shadow-2xl shadow-[#FF2E2E]/20"
               : "border-[#333] hover:border-[#FF2E2E]/50"
           }`}
-          onPointerDown={(e) => {
-            // Allow button clicks to pass through
-            const target = e.target as HTMLElement;
-            if (target.tagName === "BUTTON" || target.closest("button")) {
-              return;
-            }
-            e.stopPropagation();
-          }}
         >
           <CardHeader className="relative overflow-hidden">
             {/* Animated Background Gradient */}
@@ -327,58 +293,30 @@ export function PlanCard({ plan, index, coupon }: PlanCardProps) {
             </ul>
           </CardContent>
 
-          <CardFooter className="pt-6 relative z-50">
-            <div className="w-full relative z-50">
-              <button
-                ref={buttonRef}
-                onClick={(e) => {
-                  console.log("React: Button clicked!", { plan: plan.name, isProcessing });
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (!isProcessing) {
-                    handleGetStarted(e);
-                  }
-                }}
-                disabled={isProcessing}
-                className={`w-full text-lg py-6 font-bold relative z-50 cursor-pointer rounded-md transition-all ${
-                  isProcessing 
-                    ? "opacity-50 cursor-not-allowed" 
-                    : "hover:scale-105 active:scale-95 hover:opacity-90"
-                } ${
-                  plan.popular
-                    ? "bg-[#FF2E2E] hover:bg-[#FF2E2E]/90 text-white shadow-lg shadow-[#FF2E2E]/50"
-                    : "bg-[#222] hover:bg-[#FF2E2E] text-white border border-[#333] hover:border-[#FF2E2E]"
-                }`}
-                type="button"
-                style={{ 
-                  position: "relative", 
-                  zIndex: 9999,
-                  WebkitTapHighlightColor: "transparent",
-                  userSelect: "none",
-                }}
-              >
-                {isProcessing ? (
-                  <motion.span
-                    className="flex items-center gap-2"
-                    animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                  >
-                    Processing...
-                  </motion.span>
-                ) : (
-                  <>
-                    Get Started
-                    <motion.span
-                      animate={{ x: [0, 5, 0] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                      className="ml-2"
-                    >
-                      →
-                    </motion.span>
-                    </>
-                  )}
-              </button>
-            </div>
+          <CardFooter className="pt-6">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log("Button clicked!", plan.name);
+                if (!isProcessing) {
+                  handleGetStarted(e);
+                }
+              }}
+              disabled={isProcessing}
+              className={`w-full text-lg py-6 font-bold cursor-pointer rounded-md transition-colors ${
+                isProcessing 
+                  ? "opacity-50 cursor-not-allowed" 
+                  : ""
+              } ${
+                plan.popular
+                  ? "bg-[#FF2E2E] hover:bg-[#FF2E2E]/90 text-white shadow-lg shadow-[#FF2E2E]/50"
+                  : "bg-[#222] hover:bg-[#FF2E2E] text-white border border-[#333] hover:border-[#FF2E2E]"
+              }`}
+              type="button"
+            >
+              {isProcessing ? "Processing..." : "Get Started →"}
+            </button>
           </CardFooter>
         </Card>
       </motion.div>

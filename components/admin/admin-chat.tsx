@@ -11,7 +11,8 @@ import {
   where,
   doc,
   updateDoc,
-  getDoc
+  getDoc,
+  setDoc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { Input } from "@/components/ui/input";
@@ -122,10 +123,11 @@ export function AdminChat({ userId, userName, userEmail }: AdminChatProps) {
   const handleTyping = () => {
     setIsTyping(true);
     const typingRef = doc(db, "typing", userId);
-    updateDoc(typingRef, {
+    // Use setDoc with merge to create if doesn't exist, update if it does
+    setDoc(typingRef, {
       adminTyping: true,
       timestamp: serverTimestamp(),
-    });
+    }, { merge: true }).catch(console.error);
 
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -133,9 +135,9 @@ export function AdminChat({ userId, userName, userEmail }: AdminChatProps) {
 
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
-      updateDoc(typingRef, {
+      setDoc(typingRef, {
         adminTyping: false,
-      });
+      }, { merge: true }).catch(console.error);
     }, 1000);
   };
 
@@ -156,9 +158,9 @@ export function AdminChat({ userId, userName, userEmail }: AdminChatProps) {
       // Stop typing indicator
       setIsTyping(false);
       const typingRef = doc(db, "typing", userId);
-      updateDoc(typingRef, {
+      setDoc(typingRef, {
         adminTyping: false,
-      });
+      }, { merge: true }).catch(console.error);
 
       // Send email notification if user is offline
       if (!isUserOnline && userEmail && userName) {

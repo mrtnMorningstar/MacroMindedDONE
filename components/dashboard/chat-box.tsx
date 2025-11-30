@@ -10,7 +10,8 @@ import {
   serverTimestamp, 
   where,
   doc,
-  updateDoc
+  updateDoc,
+  setDoc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { Input } from "@/components/ui/input";
@@ -138,10 +139,11 @@ export function ChatBox({ userId }: ChatBoxProps) {
   const handleTyping = () => {
     setIsTyping(true);
     const typingRef = doc(db, "typing", userId);
-    updateDoc(typingRef, {
+    // Use setDoc with merge to create if doesn't exist, update if it does
+    setDoc(typingRef, {
       userTyping: true,
       timestamp: serverTimestamp(),
-    });
+    }, { merge: true }).catch(console.error);
 
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -149,9 +151,9 @@ export function ChatBox({ userId }: ChatBoxProps) {
 
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
-      updateDoc(typingRef, {
+      setDoc(typingRef, {
         userTyping: false,
-      });
+      }, { merge: true }).catch(console.error);
     }, 1000);
   };
 
@@ -172,9 +174,9 @@ export function ChatBox({ userId }: ChatBoxProps) {
       // Stop typing indicator
       setIsTyping(false);
       const typingRef = doc(db, "typing", userId);
-      updateDoc(typingRef, {
+      setDoc(typingRef, {
         userTyping: false,
-      });
+      }, { merge: true }).catch(console.error);
 
       setNewMessage("");
     } catch (error) {
