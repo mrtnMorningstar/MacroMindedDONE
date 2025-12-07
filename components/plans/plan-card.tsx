@@ -168,7 +168,7 @@ export function PlanCard({ plan, index, coupon }: PlanCardProps) {
         type: "spring",
         stiffness: 100,
       }}
-      className="relative"
+      className="relative h-full flex flex-col"
       onMouseMove={(e) => {
         // Check if mouse is in footer area before handling
         const rect = e.currentTarget.getBoundingClientRect();
@@ -192,20 +192,6 @@ export function PlanCard({ plan, index, coupon }: PlanCardProps) {
         perspective: "1000px",
       }}
     >
-      {plan.popular && (
-        <motion.div
-          className="absolute -top-5 left-1/2 -translate-x-1/2 z-10"
-          initial={{ scale: 0, rotate: -180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ delay: index * 0.15 + 0.3, type: "spring" }}
-        >
-          <div className="bg-gradient-to-r from-[#FF2E2E] to-[#FF5555] text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg shadow-[#FF2E2E]/50 flex items-center gap-2">
-            <Zap className="h-4 w-4" />
-            Most Popular
-          </div>
-        </motion.div>
-      )}
-
       <motion.div
         style={{
           rotateX,
@@ -217,7 +203,7 @@ export function PlanCard({ plan, index, coupon }: PlanCardProps) {
           z: 50,
         }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="relative"
+        className="relative h-full flex flex-col"
         onPointerDown={(e) => {
           const target = e.target as HTMLElement;
           if (target.tagName === "BUTTON" || target.closest("button")) {
@@ -227,8 +213,25 @@ export function PlanCard({ plan, index, coupon }: PlanCardProps) {
           e.stopPropagation();
         }}
       >
+        {plan.popular && (
+          <motion.div
+            className="absolute -top-5 left-1/2 -translate-x-1/2 z-10 pointer-events-none"
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ delay: index * 0.15 + 0.3, type: "spring" }}
+            style={{
+              transform: `translateZ(0)`,
+            }}
+          >
+            <div className="bg-gradient-to-r from-[#FF2E2E] to-[#FF5555] text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg shadow-[#FF2E2E]/50 flex items-center gap-2">
+              <Zap className="h-4 w-4" />
+              Most Popular
+            </div>
+          </motion.div>
+        )}
+
         <Card
-          className={`h-full bg-gradient-to-br from-[#111] to-[#222] border-2 transition-all duration-300 relative ${
+          className={`flex-1 flex flex-col bg-gradient-to-br from-[#111] to-[#222] border-2 transition-all duration-300 relative ${
             plan.popular
               ? "border-[#FF2E2E] shadow-2xl shadow-[#FF2E2E]/20"
               : "border-[#333] hover:border-[#FF2E2E]/50"
@@ -268,7 +271,7 @@ export function PlanCard({ plan, index, coupon }: PlanCardProps) {
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 flex-1">
             <ul className="space-y-4">
               {plan.features.map((feature, idx) => (
                 <motion.li
@@ -293,7 +296,7 @@ export function PlanCard({ plan, index, coupon }: PlanCardProps) {
             </ul>
           </CardContent>
 
-          <CardFooter className="pt-6">
+          <CardFooter className="pt-6 mt-auto">
             <button
               onClick={(e) => {
                 e.preventDefault();

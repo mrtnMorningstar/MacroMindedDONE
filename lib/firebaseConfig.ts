@@ -12,9 +12,9 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-function getApp(): FirebaseApp {
+function getApp(): FirebaseApp | null {
   if (typeof window === "undefined") {
-    throw new Error("Firebase can only be initialized on the client side");
+    return null;
   }
   
   if (!getApps().length) {
@@ -23,10 +23,10 @@ function getApp(): FirebaseApp {
   return getApps()[0];
 }
 
-const app = typeof window !== "undefined" ? getApp() : ({} as FirebaseApp);
-const auth = typeof window !== "undefined" ? getAuth(app) : ({} as Auth);
-const db = typeof window !== "undefined" ? getFirestore(app) : ({} as Firestore);
-const storage = typeof window !== "undefined" ? getStorage(app) : ({} as FirebaseStorage);
+const app = typeof window !== "undefined" ? getApp() : null;
+const auth = typeof window !== "undefined" && app ? getAuth(app) : ({} as Auth);
+const db = typeof window !== "undefined" && app ? getFirestore(app) : ({} as Firestore);
+const storage = typeof window !== "undefined" && app ? getStorage(app) : ({} as FirebaseStorage);
 
 export { auth, db, storage };
 export default app;

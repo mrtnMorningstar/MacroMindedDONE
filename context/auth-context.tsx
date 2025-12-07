@@ -24,18 +24,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        const data = await getUserData(firebaseUser.uid);
-        setUserData(data as User | null);
-      } else {
-        setUserData(null);
-      }
+    // Only initialize auth listener on client side
+    if (typeof window === "undefined") {
       setLoading(false);
-    });
+      return;
+    }
 
-    return () => unsubscribe();
+    // Check if auth is properly initialized (has app property)
+    if (!auth || !('app' in auth) || !auth.app) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        setUser(firebaseUser);
+        if (firebaseUser) {
+          const data = await getUserData(firebaseUser.uid);
+          setUserData(data as User | null);
+        } else {
+          setUserData(null);
+        }
+        setLoading(false);
+      });
+
+      return () => unsubscribe();
+    } catch (error) {
+      console.error("Auth initialization error:", error);
+      setLoading(false);
+    }
   }, []);
 
   return (

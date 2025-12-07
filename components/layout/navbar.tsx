@@ -20,10 +20,8 @@ export function Navbar() {
   };
 
   const navLinks = [
-    { href: "/", label: "Home" },
     { href: "/plans", label: "Plans" },
     { href: "/blog", label: "Blog" },
-    { href: "/contact", label: "Contact" },
   ];
 
   return (

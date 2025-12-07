@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
-import { Navbar } from "@/components/layout/navbar";
-import { Footer } from "@/components/layout/footer";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/context/auth-context";
-import { PageTransition } from "@/components/layout/page-transition";
 import { Analytics } from "@vercel/analytics/react";
+import { ChatWidget } from "@/components/chat/chat-widget";
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -29,13 +28,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable}>
-      <body className="min-h-screen flex flex-col bg-[#000] text-white">
+      <body className="min-h-screen flex flex-col bg-black text-white overflow-x-hidden overflow-y-scroll">
         <AuthProvider>
-          <Navbar />
-          <main className="flex-1">
-            <PageTransition>{children}</PageTransition>
-          </main>
-          <Footer />
+          {children}
+          <Suspense fallback={null}>
+            <ChatWidget />
+          </Suspense>
           <Toaster />
           <Analytics />
         </AuthProvider>

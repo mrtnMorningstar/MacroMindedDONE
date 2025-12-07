@@ -87,8 +87,32 @@ export async function getUserPlans(userId: string) {
       id: doc.id,
       ...doc.data(),
     }));
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error getting user plans:", error);
+    // If index error, try without orderBy as fallback
+    if (error.code === "failed-precondition") {
+      console.warn("Plans index not found. Using fallback query without orderBy.");
+      try {
+        const fallbackQuery = query(
+          collection(db, "plans"),
+          where("userId", "==", userId)
+        );
+        const querySnapshot = await getDocs(fallbackQuery);
+        const plans = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        // Sort manually by createdAt
+        return plans.sort((a: any, b: any) => {
+          const aTime = a.createdAt?.toMillis?.() || a.createdAt || (typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : 0);
+          const bTime = b.createdAt?.toMillis?.() || b.createdAt || (typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : 0);
+          return bTime - aTime;
+        });
+      } catch (fallbackError) {
+        console.error("Error in fallback query:", fallbackError);
+        throw fallbackError;
+      }
+    }
     throw error;
   }
 }

@@ -1,11 +1,30 @@
+@import "../styles/theme.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --accent-color: #FF2E2E;
+  --bg-color: #0b0b0b;
+  --text-color: #ffffff;
+  --card-bg: #151515;
+  --border-color: #222222;
+}
+
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
 @layer base {
   :root {
-    --background: #000000;
-    --foreground: #ffffff;
+    --background: var(--color-bg);
+    --foreground: var(--color-text);
     --font-inter: 'Inter', system-ui, sans-serif;
   }
 
@@ -13,15 +32,161 @@
     @apply border-border;
   }
 
+  /* Hide scrollbar globally but keep scroll behavior */
+  html, body {
+    scrollbar-gutter: stable; /* prevents layout shift */
+    overflow-x: hidden;
+  }
+
+  /* Hide the default scrollbar but keep scrolling enabled */
+  ::-webkit-scrollbar {
+    width: 0px;
+    background: transparent; /* hides background line */
+  }
+
+  /* For Firefox */
+  * {
+    scrollbar-width: none; /* hides scrollbar but allows scroll */
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-inter);
+    background-color: var(--color-bg);
+    color: var(--color-text-secondary);
+    overscroll-behavior-y: none; /* optional if background still scrolls */
   }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* MacroMinded Gradient Utility */
+  .macro-gradient {
+    background: radial-gradient(circle at top left, #FF2E2E, #7b0000);
+  }
+
+  /* MacroMinded Glow Utility */
+  .macro-glow {
+    box-shadow: 0 0 20px rgba(255, 46, 46, 0.3);
+  }
+
+  .macro-glow-lg {
+    box-shadow: 0 0 30px rgba(255, 46, 46, 0.4);
+  }
+
+  /* Animated Gradient Background */
+  .macro-gradient-animated {
+    background: radial-gradient(circle at top left, #FF2E2E, #7b0000);
+    background-size: 200% 200%;
+    opacity: 0.8;
+    animation: moveGradient 15s ease-in-out infinite alternate;
+  }
+
+  @keyframes moveGradient {
+    0% {
+      background-position: 0% 0%;
+    }
+    100% {
+      background-position: 100% 100%;
+    }
+  }
+
+  /* Responsive text hiding */
+  .hide-text-mobile {
+    @apply hidden sm:inline;
+  }
+
+  /* Motion-safe utilities */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Button ripple effect */
+  .ripple {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ripple::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+
+  .ripple:active::after {
+    width: 300px;
+    height: 300px;
+  }
+
+  /* Card inner border highlight */
+  .card-hover-border {
+    position: relative;
+  }
+
+  .card-hover-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dark), transparent);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .card-hover-border:hover::before {
+    opacity: 1;
+  }
+
+  /* Noise texture */
+  .noise-texture {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+  }
+
+  /* Custom scrollbar for chat */
+  .scroll-smooth::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scroll-smooth::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scroll-smooth::-webkit-scrollbar-thumb {
+    background-color: #333;
+    border-radius: 9999px;
+    border: none;
+  }
+
+  .scroll-smooth::-webkit-scrollbar-thumb:hover {
+    background-color: #444;
+  }
+
+  /* Ensure scrollbar thumb has rounded corners */
+  .scrollbar-thumb::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
   }
 }
 

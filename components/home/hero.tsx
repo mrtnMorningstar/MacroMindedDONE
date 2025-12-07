@@ -27,7 +27,7 @@ export function Hero() {
   }, []);
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-[#000] via-[#111] to-[#000]">
+    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-[#000] via-[#111] to-[#000] py-24">
       {/* Animated 3D Background Elements with Parallax */}
       <motion.div 
         className="absolute inset-0 -z-10 overflow-hidden"
@@ -195,7 +195,7 @@ export function Hero() {
               >
                 <Button
                   size="lg"
-                  className="group bg-[#FF2E2E] hover:bg-[#FF2E2E]/90 text-white text-lg px-8 py-6 rounded-lg shadow-lg shadow-[#FF2E2E]/50"
+                  className="group macro-gradient hover:macro-glow text-white text-lg px-8 py-6 rounded-lg transition-all duration-300"
                 >
                   View Plans
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />

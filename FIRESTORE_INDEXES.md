@@ -26,6 +26,12 @@ The application requires composite indexes for the following queries:
 - Field: `userId` (Ascending)
 - Field: `timestamp` (Descending)
 
+### 3. Plans Collection
+
+**Index:** `plans` collection
+- Field: `userId` (Ascending)
+- Field: `createdAt` (Descending)
+
 ## Setup Methods
 
 ### Method 1: Automatic Setup (Recommended)

@@ -1,33 +1,97 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users collection
-    match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      allow write: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      allow create: if request.auth != null;
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Questionnaires collection
-    match /questionnaires/{questionnaireId} {
-      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if request.auth != null && request.data.userId == request.auth.uid;
+    function isAdmin() {
+      return isSignedIn() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin" ||
+        request.auth.token.email == "admin@macrominded.com"
+      );
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own document
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      // Admins can read any user document
+      allow get: if isAdmin();
+      // Admins can list all users
+      allow list: if isAdmin();
+      // Users can list their own document (for queries)
+      allow list: if isSignedIn() && request.auth.uid == userId;
+      // Users can write their own document
+      allow write: if isSignedIn() && request.auth.uid == userId;
+      // Admins can update any user document
+      allow update: if isAdmin();
+      // Anyone can create a user document on signup
+      allow create: if isSignedIn();
+    }
+
+    // Plans collection
+    match /plans/{planId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Payments collection
+    match /payments/{paymentId} {
+      // Users can read their own payments
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      // Admins can list all payments
+      allow list: if isAdmin();
+      // Users can list their own payments (query filters by userId)
+      allow list: if isSignedIn();
+      // Users can create their own payment records
+      allow create: if isSignedIn() && request.data.userId == request.auth.uid;
+      // Admins can update/delete payments
       allow update, delete: if isAdmin();
     }
 
     // Messages collection
     match /messages/{messageId} {
-      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if request.auth != null && (request.data.userId == request.auth.uid || isAdmin());
-      allow update: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      // Users can read messages for their userId
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      // Admins can list all messages
+      allow list: if isAdmin();
+      // Users can list their own messages (query filters by userId)
+      allow list: if isSignedIn();
+      // Users and admins can create messages
+      allow create: if isSignedIn() && (
+        request.data.userId == request.auth.uid || 
+        request.data.sender == "admin"
+      );
+      // Users and admins can update messages
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        isAdmin()
+      );
+      // Only admins can delete messages
       allow delete: if isAdmin();
     }
 
-    // Payments collection
-    match /payments/{paymentId} {
-      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if request.auth != null && request.data.userId == request.auth.uid;
+    // Admin configuration
+    match /adminConfig/{doc} {
+      allow read, write: if isAdmin();
+    }
+
+    // Email templates
+    match /emailTemplates/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // System logs
+    match /systemLogs/{id} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Questionnaires
+    match /questionnaires/{questionnaireId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();
     }
 
@@ -39,16 +103,14 @@ service cloud.firestore {
 
     // Typing indicators
     match /typing/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
 
-    // Helper function to check if user is admin
-    function isAdmin() {
-      return request.auth != null && 
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-         request.auth.token.email == 'admin@macrominded.com');
+    // Admins collection
+    match /admins/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+      allow read: if isAdmin();
     }
   }
 }
-

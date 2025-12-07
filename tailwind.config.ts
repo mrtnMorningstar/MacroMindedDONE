@@ -10,31 +10,33 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        background: "var(--color-bg)",
+        foreground: "var(--color-text)",
+        card: "var(--color-card)",
         primary: {
-          DEFAULT: "#FF2E2E",
-          foreground: "#FFFFFF",
+          DEFAULT: "var(--color-accent)",
+          foreground: "var(--color-text)",
         },
         secondary: {
           DEFAULT: "#111111",
-          foreground: "#FFFFFF",
+          foreground: "var(--color-text)",
         },
         accent: {
-          DEFAULT: "#222222",
-          foreground: "#FFFFFF",
+          DEFAULT: "var(--color-accent)",
+          dark: "var(--color-accent-dark)",
+          foreground: "var(--color-text)",
         },
         destructive: {
-          DEFAULT: "#FF2E2E",
-          foreground: "#FFFFFF",
+          DEFAULT: "var(--color-accent)",
+          foreground: "var(--color-text)",
         },
         muted: {
           DEFAULT: "#111111",
           foreground: "#888888",
         },
-        border: "#222222",
-        input: "#222222",
-        ring: "#FF2E2E",
+        border: "var(--color-border)",
+        input: "var(--color-border)",
+        ring: "var(--color-accent)",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
@@ -43,6 +45,7 @@ const config: Config = {
         "fade-in": "fadeIn 0.5s ease-in-out",
         "slide-up": "slideUp 0.5s ease-out",
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "gradient-move": "moveGradient 15s ease-in-out infinite alternate",
       },
       keyframes: {
         fadeIn: {
@@ -53,6 +56,14 @@ const config: Config = {
           "0%": { transform: "translateY(20px)", opacity: "0" },
           "100%": { transform: "translateY(0)", opacity: "1" },
         },
+        moveGradient: {
+          "0%": { backgroundPosition: "0% 0%" },
+          "100%": { backgroundPosition: "100% 100%" },
+        },
+      },
+      boxShadow: {
+        "macro-glow": "0 0 20px rgba(255, 46, 46, 0.3)",
+        "macro-glow-lg": "0 0 30px rgba(255, 46, 46, 0.4)",
       },
     },
   },

@@ -1,0 +1,15 @@
+:root {
+  --color-bg: #0b0b0b;
+  --color-card: #151515;
+  --color-text: #fff;
+  --color-accent: #FF2E2E;
+  --color-accent-dark: #7b0000;
+  --color-border: #222;
+  --color-text-secondary: #f3f4f6; /* text-gray-100 for contrast */
+}
+
+/* Ensure light text meets contrast requirements */
+body {
+  color: var(--color-text-secondary);
+}
+

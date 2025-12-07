@@ -6,7 +6,7 @@ export interface User {
   name?: string;
   role?: "client" | "admin";
   hasActivePlan?: boolean;
-  planStatus?: "pending" | "in-progress" | "delivered";
+  planStatus?: "Pending" | "In Progress" | "Delivered" | "pending" | "in-progress" | "delivered";
   createdAt?: string;
   questionnaireData?: QuestionnaireData;
   planUrl?: string;
@@ -14,6 +14,11 @@ export interface User {
   planDeliveredAt?: string;
   isOnline?: boolean;
   lastSeen?: any;
+  macroTargets?: {
+    protein?: number;
+    carbs?: number;
+    fats?: number;
+  };
 }
 
 export interface Plan {
@@ -54,9 +59,12 @@ export interface Payment {
   id: string;
   userId: string;
   amount: number;
-  currency: string;
-  status: string;
-  planId: string;
-  createdAt: string;
+  currency?: string;
+  status?: string;
+  planId?: string;
+  planType: string;
+  stripeSessionId?: string;
+  timestamp?: any;
+  createdAt?: string | any;
 }
 

@@ -52,35 +52,17 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     return (
       <motion.button
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(
+          buttonVariants({ variant, size, className }),
+          "ripple relative"
+        )}
         ref={ref}
         whileHover={{ 
-          scale: 1.02,
+          scale: 1.05,
+          boxShadow: "0 0 20px rgba(255, 46, 46, 0.4)",
           transition: { duration: 0.2 }
         }}
         whileTap={{ scale: 0.98 }}
-        animate={
-          variant === "default" || variant === "destructive"
-            ? {
-                boxShadow: [
-                  "0 0 0px rgba(255, 46, 46, 0)",
-                  "0 0 20px rgba(255, 46, 46, 0.3)",
-                  "0 0 0px rgba(255, 46, 46, 0)",
-                ],
-              }
-            : undefined
-        }
-        transition={
-          variant === "default" || variant === "destructive"
-            ? {
-                boxShadow: {
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                },
-              }
-            : undefined
-        }
         {...(props as any)}
       />
     );

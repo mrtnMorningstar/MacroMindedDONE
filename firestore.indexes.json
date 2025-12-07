@@ -1,16 +1,30 @@
 {
   "indexes": [
     {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "planStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "payments",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "userId",
-          "order": "ASCENDING"
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
         },
         {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
+          "fieldPath": "planType",
+          "order": "ASCENDING"
         }
       ]
     },
@@ -43,7 +57,21 @@
       ]
     },
     {
-      "collectionGroup": "messages",
+      "collectionGroup": "systemLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "progress",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -51,12 +79,11 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
+          "fieldPath": "date",
+          "order": "ASCENDING"
         }
       ]
     }
   ],
   "fieldOverrides": []
 }
-
