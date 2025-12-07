@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { LogOut, MessageSquare, LineChart, Wallet, Brain, Settings, LayoutDashboard } from "lucide-react";
+import { LogOut, MessageSquare, LineChart, Wallet, Brain, Settings, LayoutDashboard, FileText } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/config";
@@ -15,6 +15,7 @@ const navLinks = [
   { name: "Overview", href: "/dashboard/overview", icon: LayoutDashboard },
   { name: "My Plan", href: "/dashboard/plan", icon: Brain },
   { name: "Chat", href: "/dashboard/chat", icon: MessageSquare },
+  { name: "Log", href: "/dashboard/log", icon: FileText },
   { name: "Progress", href: "/dashboard/progress", icon: LineChart },
   { name: "Payments", href: "/dashboard/payments", icon: Wallet },
   { name: "Insights", href: "/dashboard/insights", icon: Brain },
