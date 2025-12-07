@@ -14,14 +14,14 @@ import { useRealtimeDoc } from "@/hooks/use-realtime-doc";
 import { useRealtimeCollection } from "@/hooks/use-realtime-collection";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, MessageCircle, Minus } from "lucide-react";
+import { Send, MessageCircle, Minus, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/auth-context";
 
 interface Message {
   id: string;
   userId: string;
-  sender: "admin" | "user";
+  sender: "admin" | "user" | "assistant";
   text: string;
   timestamp: any;
 }
@@ -37,6 +37,8 @@ export function ChatInterface({ userId, onMinimize }: ChatInterfaceProps) {
   const [loading, setLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [scrollLocked, setScrollLocked] = useState(false);
+  const [aiMode, setAiMode] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const lastTouchYRef = useRef<number | null>(null);
@@ -178,18 +180,57 @@ export function ChatInterface({ userId, onMinimize }: ChatInterfaceProps) {
   const sendMessage = async () => {
     if (!newMessage.trim() || loading || !userId) return;
 
+    const text = newMessage.trim();
+    setNewMessage("");
     setLoading(true);
     setIsTyping(false);
     
     try {
+      // Save user message
       await addDoc(collection(db, "messages"), {
         userId,
         sender: "user" as const,
-        text: newMessage.trim(),
+        text,
         timestamp: serverTimestamp(),
       });
 
-      setNewMessage("");
+      // If AI mode is on, get AI response
+      if (aiMode) {
+        setAiLoading(true);
+        try {
+          const res = await fetch("/api/ai/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, prompt: text }),
+          });
+
+          if (!res.ok) {
+            throw new Error("AI API error");
+          }
+
+          const data = await res.json();
+          const aiResponse = data.text || "I'm having trouble processing that right now. Please try again.";
+
+          // Save AI assistant response
+          await addDoc(collection(db, "messages"), {
+            userId,
+            sender: "assistant" as const,
+            text: aiResponse,
+            timestamp: serverTimestamp(),
+          });
+        } catch (aiError) {
+          console.error("Error getting AI response:", aiError);
+          // Optionally show error message to user
+          await addDoc(collection(db, "messages"), {
+            userId,
+            sender: "assistant" as const,
+            text: "I'm having trouble processing that right now. Please try again later.",
+            timestamp: serverTimestamp(),
+          });
+        } finally {
+          setAiLoading(false);
+        }
+      }
     } catch (error) {
       console.error("Error sending message:", error);
     } finally {
@@ -324,6 +365,8 @@ export function ChatInterface({ userId, onMinimize }: ChatInterfaceProps) {
             <AnimatePresence>
               {messages.map((message, index) => {
                 const isUser = message.sender === "user";
+                const isAssistant = message.sender === "assistant";
+                const isAdmin = message.sender === "admin";
                 const prevMessage = index > 0 ? messages[index - 1] : null;
                 const dateHeader = formatDateHeader(message.timestamp, prevMessage?.timestamp);
 
@@ -336,30 +379,55 @@ export function ChatInterface({ userId, onMinimize }: ChatInterfaceProps) {
                         </div>
                       </div>
                     )}
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-                    >
-                      <div className={`max-w-[70%] ${isUser ? "flex flex-col items-end" : "flex flex-col items-start"}`}>
-                        <div
-                          className={`rounded-3xl px-4 py-2.5 ${
-                            isUser
-                              ? "bg-gradient-to-br from-[#1a1a1a] to-[#222] text-white border border-[#333]/30 shadow-lg"
-                              : "bg-gradient-to-br from-[#FF2E2E] to-[#FF5555] text-white shadow-[0_0_15px_rgba(255,46,46,0.25)]"
-                          }`}
-                        >
-                          <p className="text-sm leading-relaxed break-words">{message.text}</p>
-                          <div className={`flex items-center gap-1 mt-1.5 ${isUser ? "justify-end" : "justify-start"}`}>
-                            <span className="text-[10px] opacity-70">
-                              {formatTime(message.timestamp)}
-                            </span>
+                    {isAssistant ? (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.3 }}
+                        className="flex justify-start"
+                      >
+                        <div className="max-w-[70%] flex flex-col items-start">
+                          <div className="bg-gradient-to-br from-[#FF2E2E] to-[#FF5555]/80 text-white rounded-2xl px-4 py-3 shadow-[0_0_15px_rgba(255,46,46,0.25)] relative">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Sparkles className="h-3 w-3 text-white/90" />
+                              <span className="text-xs font-semibold opacity-90">AI Assistant</span>
+                            </div>
+                            <p className="text-sm leading-relaxed break-words">{message.text}</p>
+                            <div className="flex items-center gap-1 mt-2 justify-start">
+                              <span className="text-[10px] opacity-70">
+                                {formatTime(message.timestamp)}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </motion.div>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                      >
+                        <div className={`max-w-[70%] ${isUser ? "flex flex-col items-end" : "flex flex-col items-start"}`}>
+                          <div
+                            className={`rounded-3xl px-4 py-2.5 ${
+                              isUser
+                                ? "bg-gradient-to-br from-[#1a1a1a] to-[#222] text-white border border-[#333]/30 shadow-lg"
+                                : "bg-gradient-to-br from-[#FF2E2E] to-[#FF5555] text-white shadow-[0_0_15px_rgba(255,46,46,0.25)]"
+                            }`}
+                          >
+                            <p className="text-sm leading-relaxed break-words">{message.text}</p>
+                            <div className={`flex items-center gap-1 mt-1.5 ${isUser ? "justify-end" : "justify-start"}`}>
+                              <span className="text-[10px] opacity-70">
+                                {formatTime(message.timestamp)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
                   </div>
                 );
               })}
@@ -396,19 +464,80 @@ export function ChatInterface({ userId, onMinimize }: ChatInterfaceProps) {
             </motion.div>
           )}
 
+          {/* AI Typing Indicator */}
+          {aiLoading && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="flex justify-start"
+            >
+              <div className="bg-gradient-to-br from-[#FF2E2E] to-[#FF5555] rounded-2xl px-4 py-3 shadow-[0_0_15px_rgba(255,46,46,0.25)]">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-3 w-3 text-white/90" />
+                  <div className="flex gap-1">
+                    <motion.div
+                      className="w-2 h-2 bg-white/80 rounded-full"
+                      animate={{ y: [0, -4, 0] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
+                    />
+                    <motion.div
+                      className="w-2 h-2 bg-white/80 rounded-full"
+                      animate={{ y: [0, -4, 0] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
+                    />
+                    <motion.div
+                      className="w-2 h-2 bg-white/80 rounded-full"
+                      animate={{ y: [0, -4, 0] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           <div ref={messagesEndRef} />
         </div>
       </div>
 
       {/* Fixed Input Area at Bottom */}
       <div className="p-4 border-t border-[#222]/60 bg-[#111]/90 backdrop-blur-sm">
+        {/* AI Mode Toggle */}
+        <div className="flex items-center gap-2 mb-2">
+          <motion.button
+            onClick={() => setAiMode(!aiMode)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`text-xs px-3 py-1.5 rounded-full border transition-all duration-200 flex items-center gap-1.5 ${
+              aiMode
+                ? "bg-[#FF2E2E] text-white border-[#FF2E2E] shadow-[0_0_10px_rgba(255,46,46,0.4)]"
+                : "border-[#333] text-gray-400 hover:border-[#FF2E2E]/50"
+            }`}
+          >
+            <Sparkles className={`h-3 w-3 ${aiMode ? "text-white" : "text-gray-400"}`} />
+            {aiMode ? "AI Mode ON" : "AI Mode OFF"}
+          </motion.button>
+          {aiMode && (
+            <motion.span
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-xs text-gray-500"
+            >
+              Ask questions about your plan and progress
+            </motion.span>
+          )}
+        </div>
+
         <div className="flex gap-2 items-end max-w-7xl mx-auto">
           <div className="flex-1 bg-[#111]/90 rounded-lg px-4 py-3 border border-[#333]/50 focus-within:border-[#FF2E2E]/40 focus-within:ring-2 focus-within:ring-[#FF2E2E]/40 transition-all">
             <Input
               value={newMessage}
               onChange={(e) => {
                 setNewMessage(e.target.value);
-                handleTyping();
+                if (!aiMode) {
+                  handleTyping();
+                }
               }}
               onKeyPress={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -416,8 +545,8 @@ export function ChatInterface({ userId, onMinimize }: ChatInterfaceProps) {
                   sendMessage();
                 }
               }}
-              placeholder="Type a message..."
-              disabled={loading}
+              placeholder={aiMode ? "Ask your AI assistant anything..." : "Type a message..."}
+              disabled={loading || aiLoading}
               className="bg-transparent border-0 text-white placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
             />
           </div>
@@ -428,7 +557,7 @@ export function ChatInterface({ userId, onMinimize }: ChatInterfaceProps) {
           >
             <Button
               onClick={sendMessage}
-              disabled={loading || !newMessage.trim()}
+              disabled={loading || aiLoading || !newMessage.trim()}
               size="icon"
               className="bg-[#FF2E2E] hover:bg-[#FF2E2E]/90 text-white rounded-full w-12 h-12"
             >
