@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Activity, TrendingUp, Flame, MessageSquare, Save, Sparkles } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
-import { collection, addDoc, query, where, onSnapshot, orderBy, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, query, where, onSnapshot, orderBy, serverTimestamp, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { useToast } from "@/hooks/use-toast";
 
@@ -50,7 +50,8 @@ export default function LogPage() {
       q = query(
         progressRef,
         where("userId", "==", user.uid),
-        orderBy("date", "desc")
+        orderBy("date", "desc"),
+        limit(50)
       );
     } catch (error: any) {
       // If index error, use fallback query without orderBy

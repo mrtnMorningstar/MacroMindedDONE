@@ -13,7 +13,7 @@ export interface SendEmailParams {
   from?: string;
 }
 
-export async function sendEmail({ to, subject, html, from = "MacroMinded <onboarding@resend.dev>" }: SendEmailParams) {
+export async function sendEmail({ to, subject, html, from = "MacroMinded <support@macrominded.net>" }: SendEmailParams) {
   try {
     const result = await resend.emails.send({
       from,

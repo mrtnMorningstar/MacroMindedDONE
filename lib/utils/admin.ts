@@ -32,7 +32,7 @@ export function isAdminUser(user: any, userData: any): boolean {
  */
 export function getAdminEmails(): string[] {
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || process.env.ADMIN_EMAIL;
-  const emails = ["admin@macrominded.com"];
+  const emails = ["support@macrominded.net"];
   
   if (adminEmail) {
     emails.push(adminEmail);

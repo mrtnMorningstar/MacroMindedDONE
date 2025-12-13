@@ -19,6 +19,9 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { useAuth } from "@/context/auth-context";
 import { generateUserInsights } from "@/lib/ai/insights";
+import { ProgressTimeline } from "@/components/dashboard/progress-timeline";
+import { WeeklyReport } from "@/components/dashboard/weekly-report";
+import { SmartRecommendations } from "@/components/dashboard/smart-recommendations";
 
 interface ProgressEntry {
   id?: string;
@@ -217,7 +220,7 @@ export default function ProgressPage() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="rounded-2xl border border-white/10 p-6 bg-white/[0.03] backdrop-blur-xl shadow-lg"
+        className="rounded-2xl border border-white/10 p-3 sm:p-6 bg-white/[0.03] backdrop-blur-xl shadow-lg"
       >
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-3">
@@ -264,7 +267,7 @@ export default function ProgressPage() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="rounded-2xl border border-white/10 p-6 bg-white/[0.03] backdrop-blur-xl shadow-lg"
+        className="rounded-2xl border border-white/10 p-3 sm:p-6 bg-white/[0.03] backdrop-blur-xl shadow-lg"
       >
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-3">
@@ -299,11 +302,31 @@ export default function ProgressPage() {
         )}
       </motion.div>
 
-      {/* AI Summary */}
+      {/* Weekly AI Report & Smart Recommendations */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <WeeklyReport />
+        <SmartRecommendations />
+      </div>
+
+      {/* Progress Timeline */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
+        className="space-y-6"
+      >
+        <div>
+          <h2 className="text-xl font-semibold mb-1">Your Logged Progress</h2>
+          <p className="text-gray-400 text-sm">A chronological timeline of all your entries</p>
+        </div>
+        <ProgressTimeline />
+      </motion.div>
+
+      {/* AI Summary */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.8 }}
         className="rounded-2xl border border-white/10 p-6 backdrop-blur-xl bg-gradient-to-br from-[#1E1E1E]/40 to-[#0A0A0A]/60 shadow-2xl"
       >
         <div className="flex items-center gap-3 mb-3">

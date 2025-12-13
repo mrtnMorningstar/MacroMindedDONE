@@ -8,6 +8,9 @@ import { useState, useEffect } from "react";
 
 export function Hero() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // useScroll and useTransform hooks - these are safe in client components
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 500], [0, 200]);
   const opacity = useTransform(scrollY, [0, 400], [1, 0]);
@@ -15,6 +18,8 @@ export function Hero() {
   const backgroundY = useTransform(scrollY, [0, 500], [0, 100]);
 
   useEffect(() => {
+    setIsMounted(true);
+    
     const handleMouseMove = (e: MouseEvent) => {
       setMousePosition({
         x: (e.clientX / window.innerWidth - 0.5) * 20,
@@ -31,7 +36,7 @@ export function Hero() {
       {/* Animated 3D Background Elements with Parallax */}
       <motion.div 
         className="absolute inset-0 -z-10 overflow-hidden"
-        style={{ y: backgroundY }}
+        style={isMounted ? { y: backgroundY } : {}}
       >
         <motion.div
           className="absolute top-20 left-10 w-96 h-96 bg-[#FF2E2E]/20 rounded-full blur-3xl"
@@ -108,7 +113,7 @@ export function Hero() {
       ))}
 
       <motion.div
-        style={{ y, opacity, scale }}
+        style={isMounted ? { y, opacity, scale } : {}}
         className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10"
       >
         <motion.div

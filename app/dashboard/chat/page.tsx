@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Sparkles, Bot, User, WifiOff, MessageCircle } from "lucide-react";
+import { Send, Sparkles, Bot, User, WifiOff, MessageCircle, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { collection, addDoc, orderBy, query, where, onSnapshot, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, orderBy, query, where, onSnapshot, serverTimestamp, limit, getDocs, doc, deleteDoc, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { useAuth } from "@/context/auth-context";
 import { useRealtimeCollection } from "@/hooks/use-realtime-collection";
@@ -26,6 +26,7 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
+  const [clearing, setClearing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -35,7 +36,8 @@ export default function ChatPage() {
     return query(
       collection(db, "messages"),
       where("userId", "==", user.uid),
-      orderBy("timestamp", "asc")
+      orderBy("timestamp", "desc"),
+      limit(50)
     );
   }, [user?.uid]);
 
@@ -44,7 +46,62 @@ export default function ChatPage() {
     { enabled: !!user?.uid }
   );
 
-  const messages = messagesError?.code === "failed-precondition" ? [] : (messagesData || []);
+  // Reverse to show oldest first, but limit to last 50
+  const messages = messagesError?.code === "failed-precondition" ? [] : (messagesData || []).slice().reverse();
+
+  // Clear chat history on new session
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const sessionKey = `chat_session_${user.uid}`;
+    const hasVisitedThisSession = sessionStorage.getItem(sessionKey);
+
+    // If this is a new session, clear all messages
+    if (!hasVisitedThisSession) {
+      sessionStorage.setItem(sessionKey, "true");
+      
+      // Clear messages automatically
+      const clearOnNewSession = async () => {
+        try {
+          const messagesQuery = query(
+            collection(db, "messages"),
+            where("userId", "==", user.uid)
+          );
+
+          const snapshot = await getDocs(messagesQuery);
+
+          if (!snapshot.empty) {
+            // Use batch delete for efficiency
+            const batch = writeBatch(db);
+            const batches: typeof batch[] = [];
+            let currentBatch = writeBatch(db);
+            let operationCount = 0;
+
+            snapshot.docs.forEach((docSnapshot) => {
+              if (operationCount >= 500) {
+                batches.push(currentBatch);
+                currentBatch = writeBatch(db);
+                operationCount = 0;
+              }
+              currentBatch.delete(doc(db, "messages", docSnapshot.id));
+              operationCount++;
+            });
+
+            if (operationCount > 0) {
+              batches.push(currentBatch);
+            }
+
+            // Execute all batches
+            await Promise.all(batches.map((b) => b.commit()));
+          }
+        } catch (error) {
+          console.error("Error clearing chat on new session:", error);
+        }
+      };
+
+      clearOnNewSession();
+    }
+  }, [user?.uid]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -92,6 +149,66 @@ export default function ChatPage() {
       });
     } catch {
       return "";
+    }
+  };
+
+  // Clear all messages
+  const clearChat = async () => {
+    if (!user?.uid) return;
+
+    // Confirmation dialog
+    const confirmed = window.confirm(
+      "Are you sure you want to clear all messages? This action cannot be undone."
+    );
+
+    if (!confirmed) return;
+
+    setClearing(true);
+
+    try {
+      // Get all messages for this user
+      const messagesQuery = query(
+        collection(db, "messages"),
+        where("userId", "==", user.uid)
+      );
+
+      const snapshot = await getDocs(messagesQuery);
+
+      if (snapshot.empty) {
+        setClearing(false);
+        return;
+      }
+
+      // Use batch delete for efficiency (Firestore allows up to 500 operations per batch)
+      const batch = writeBatch(db);
+      const batches: typeof batch[] = [];
+      let currentBatch = writeBatch(db);
+      let operationCount = 0;
+
+      snapshot.docs.forEach((docSnapshot) => {
+        if (operationCount >= 500) {
+          batches.push(currentBatch);
+          currentBatch = writeBatch(db);
+          operationCount = 0;
+        }
+        currentBatch.delete(doc(db, "messages", docSnapshot.id));
+        operationCount++;
+      });
+
+      if (operationCount > 0) {
+        batches.push(currentBatch);
+      }
+
+      // Execute all batches
+      await Promise.all(batches.map((b) => b.commit()));
+
+      // Show success feedback
+      console.log("Chat cleared successfully");
+    } catch (error) {
+      console.error("Error clearing chat:", error);
+      alert("Failed to clear chat. Please try again.");
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -199,7 +316,7 @@ export default function ChatPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button
               size="sm"
               variant="outline"
@@ -212,6 +329,25 @@ export default function ChatPage() {
             >
               <Sparkles className="w-3 h-3 mr-1" /> {aiMode ? "AI On" : "AI Off"}
             </Button>
+
+            {messages.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={clearChat}
+                disabled={clearing}
+                className="text-xs border-red-500/40 text-red-400 hover:bg-red-500/20 hover:border-red-500/60 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Clear all messages"
+              >
+                {clearing ? (
+                  <div className="w-3 h-3 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Trash2 className="w-3 h-3 mr-1" /> Clear Chat
+                  </>
+                )}
+              </Button>
+            )}
 
             {!isOnline && (
               <div className="flex items-center gap-1 text-gray-500 text-xs">

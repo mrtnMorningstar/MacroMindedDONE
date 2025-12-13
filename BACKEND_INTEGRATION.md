@@ -119,7 +119,7 @@ All templates return branded HTML with:
 ### Admin Access
 Admin emails configured via `ADMIN_EMAILS` environment variable (comma-separated):
 ```
-ADMIN_EMAILS=admin@macrominded.com,other@domain.com
+ADMIN_EMAILS=support@macrominded.net
 ```
 
 ## 🗄️ Firestore Data Model

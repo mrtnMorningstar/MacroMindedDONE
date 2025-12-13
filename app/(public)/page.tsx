@@ -8,13 +8,13 @@ import { CTA } from "@/components/home/cta";
 
 export default function HomePage() {
   return (
-    <>
+    <div className="min-h-screen bg-black text-white">
       <Hero />
       <HowItWorks />
       <MacroCalculator />
       <Testimonials />
       <CTA />
-    </>
+    </div>
   );
 }
 

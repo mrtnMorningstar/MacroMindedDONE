@@ -31,7 +31,7 @@
    RESEND_API_KEY=re_...
 
    # Admin Configuration
-   ADMIN_EMAIL=admin@macrominded.com
+   ADMIN_EMAIL=support@macrominded.net
 
    # App URL
    NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -135,7 +135,7 @@ To access the admin panel, you have three options:
    - Use that email address to sign in
 
 3. **Default Admin Email**
-   - Use `admin@macrominded.com` (fallback option)
+   - Use `support@macrominded.net` (fallback option)
 
 **Note:** The admin panel checks all three methods. Once you have admin access, you can:
 - View all users with their plan status and payment info

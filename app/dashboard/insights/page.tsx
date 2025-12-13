@@ -15,7 +15,7 @@ import {
 } from "recharts";
 import { Brain, TrendingUp, Activity, Flame, RefreshCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { collection, query, where, onSnapshot, orderBy, doc, getDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, doc, getDoc, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { useAuth } from "@/context/auth-context";
 import { generateUserInsights } from "@/lib/ai/insights";
@@ -40,6 +40,8 @@ export default function InsightsPage() {
   const [avgCalories, setAvgCalories] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [progressEntries, setProgressEntries] = useState<ProgressEntry[]>([]);
+  const [planData, setPlanData] = useState<any>(null);
 
   useEffect(() => {
     if (!user?.uid) {
@@ -56,7 +58,8 @@ export default function InsightsPage() {
       q = query(
         progressRef,
         where("userId", "==", user.uid),
-        orderBy("date", "asc")
+        orderBy("date", "asc"),
+        limit(50)
       );
     } catch (error: any) {
       // If index error, use fallback query
@@ -87,6 +90,12 @@ export default function InsightsPage() {
           }
         } catch (error) {
           console.warn("Could not fetch user plan data:", error);
+        }
+
+        // Store progress entries and plan data for refresh functionality
+        setProgressEntries(progressEntries);
+        if (planData) {
+          setPlanData(planData);
         }
 
         if (progressEntries.length > 0) {
@@ -130,20 +139,24 @@ export default function InsightsPage() {
             const totalCalories = validEntries.reduce((sum, e) => sum + (e.calories || 0), 0);
             const totalCompliance = validEntries.reduce((sum, e) => sum + (e.compliancePercent || 0), 0);
 
-            setAvgSteps(Math.round(totalSteps / validEntries.length));
-            setAvgCalories(Math.round(totalCalories / validEntries.length));
-            setCompliance(Math.round(totalCompliance / validEntries.length));
+            const calculatedAvgSteps = Math.round(totalSteps / validEntries.length);
+            const calculatedAvgCalories = Math.round(totalCalories / validEntries.length);
+            const calculatedCompliance = Math.round(totalCompliance / validEntries.length);
+
+            setAvgSteps(calculatedAvgSteps);
+            setAvgCalories(calculatedAvgCalories);
+            setCompliance(calculatedCompliance);
+
+            // Generate AI summary using insights utility
+            const insights = generateUserInsights({
+              progress: progressEntries,
+              plan: planData,
+            });
+
+            // Enhance summary with additional metrics
+            const enhancedSummary = generateEnhancedSummary(progressEntries, insights, calculatedAvgSteps, calculatedAvgCalories);
+            setAiSummary(enhancedSummary);
           }
-
-          // Generate AI summary using insights utility
-          const insights = generateUserInsights({
-            progress: progressEntries,
-            plan: planData,
-          });
-
-          // Enhance summary with additional metrics
-          const enhancedSummary = generateEnhancedSummary(progressEntries, insights, avgSteps, avgCalories);
-          setAiSummary(enhancedSummary);
         } else {
           // No data
           setChartData([]);
@@ -209,9 +222,34 @@ export default function InsightsPage() {
   };
 
   const handleRefresh = () => {
+    if (!progressEntries.length) {
+      return;
+    }
+
     setRefreshing(true);
     setAiSummary("Reanalyzing your latest progress...");
-    fetchInsightsData();
+    
+    // Regenerate the summary with current data
+    setTimeout(() => {
+      const validEntries = progressEntries.filter((e) => e.weight || e.calories || e.steps);
+      if (validEntries.length > 0) {
+        const totalSteps = validEntries.reduce((sum, e) => sum + (e.steps || 0), 0);
+        const totalCalories = validEntries.reduce((sum, e) => sum + (e.calories || 0), 0);
+        const calculatedAvgSteps = Math.round(totalSteps / validEntries.length);
+        const calculatedAvgCalories = Math.round(totalCalories / validEntries.length);
+
+        // Generate AI summary using insights utility
+        const insights = generateUserInsights({
+          progress: progressEntries,
+          plan: planData,
+        });
+
+        // Enhance summary with additional metrics
+        const enhancedSummary = generateEnhancedSummary(progressEntries, insights, calculatedAvgSteps, calculatedAvgCalories);
+        setAiSummary(enhancedSummary);
+      }
+      setRefreshing(false);
+    }, 800);
   };
 
   if (loading) {

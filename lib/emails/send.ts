@@ -5,7 +5,7 @@ export async function sendWelcomeEmail(email: string, name: string) {
   try {
     const template = emailTemplates.welcome(name);
     await resend.emails.send({
-      from: "MacroMinded <onboarding@resend.dev>",
+      from: "MacroMinded <support@macrominded.net>",
       to: email,
       subject: template.subject,
       html: template.html,
@@ -24,7 +24,7 @@ export async function sendPaymentConfirmationEmail(
   try {
     const template = emailTemplates.paymentConfirmation(name, amount, planName);
     await resend.emails.send({
-      from: "MacroMinded <onboarding@resend.dev>",
+      from: "MacroMinded <support@macrominded.net>",
       to: email,
       subject: template.subject,
       html: template.html,
@@ -38,7 +38,7 @@ export async function sendPlanReadyEmail(email: string, name: string) {
   try {
     const template = emailTemplates.planReady(name);
     await resend.emails.send({
-      from: "MacroMinded <onboarding@resend.dev>",
+      from: "MacroMinded <support@macrominded.net>",
       to: email,
       subject: template.subject,
       html: template.html,
@@ -56,7 +56,7 @@ export async function sendAdminReplyEmail(
   try {
     const template = emailTemplates.adminReply(name, messagePreview);
     await resend.emails.send({
-      from: "MacroMinded <onboarding@resend.dev>",
+      from: "MacroMinded <support@macrominded.net>",
       to: email,
       subject: template.subject,
       html: template.html,

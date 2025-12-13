@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { LogOut, MessageSquare, LineChart, Wallet, Brain, Settings, LayoutDashboard, FileText } from "lucide-react";
+import { LogOut, MessageSquare, LineChart, Wallet, Brain, Settings, LayoutDashboard, FileText, Target, Home } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/config";
@@ -17,6 +17,7 @@ const navLinks = [
   { name: "Chat", href: "/dashboard/chat", icon: MessageSquare },
   { name: "Log", href: "/dashboard/log", icon: FileText },
   { name: "Progress", href: "/dashboard/progress", icon: LineChart },
+  { name: "Goals", href: "/dashboard/goals", icon: Target },
   { name: "Payments", href: "/dashboard/payments", icon: Wallet },
   { name: "Insights", href: "/dashboard/insights", icon: Brain },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
@@ -46,21 +47,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         transition={{ duration: 0.4 }}
         className={cn(
           "fixed left-0 top-0 h-full backdrop-blur-xl border-r border-white/10 bg-white/5 shadow-2xl flex flex-col justify-between transition-all z-50",
-          collapsed ? "w-[80px]" : "w-[240px]"
+          collapsed ? "w-[80px]" : "w-[240px]",
+          "hidden md:flex" // Hide on mobile, show on desktop
         )}
       >
         <div className="p-4 space-y-4">
-          <motion.h1
-            layout
-            className={cn(
-              "font-extrabold text-2xl text-[#FF2E2E] tracking-tight transition-all",
-              collapsed && "text-center text-lg"
-            )}
-          >
-            {collapsed ? "M" : "MacroMinded"}
-          </motion.h1>
+          <Link href="/">
+            <motion.h1
+              layout
+              whileHover={{ scale: 1.05 }}
+              className={cn(
+                "font-extrabold text-2xl text-[#FF2E2E] tracking-tight transition-all cursor-pointer hover:text-[#FF5555]",
+                collapsed && "text-center text-lg"
+              )}
+            >
+              {collapsed ? "M" : "MacroMinded"}
+            </motion.h1>
+          </Link>
 
           <nav className="space-y-1">
+            {/* Home Link */}
+            <Link href="/">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-xl transition-all cursor-pointer",
+                  pathname === "/"
+                    ? "bg-[#FF2E2E]/20 text-[#FF2E2E]"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                )}
+              >
+                <Home className="w-5 h-5 flex-shrink-0" />
+                {!collapsed && <span className="text-sm font-medium">Home</span>}
+              </motion.div>
+            </Link>
             {navLinks.map(({ name, href, icon: Icon }) => {
               const active = pathname === href || (href !== "/dashboard/overview" && pathname?.startsWith(href));
               return (
@@ -113,8 +133,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
         className={cn(
-          "flex-1 ml-[240px] p-8 transition-all duration-300",
-          collapsed && "ml-[80px]"
+          "flex-1 ml-0 md:ml-[240px] p-3 sm:p-6 md:p-8 transition-all duration-300",
+          collapsed && "md:ml-[80px]"
         )}
       >
         {children}

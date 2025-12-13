@@ -8,7 +8,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin" ||
-        request.auth.token.email == "admin@macrominded.com"
+        request.auth.token.email == "support@macrominded.net"
       );
     }
 

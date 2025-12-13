@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ArrowLeft, Calendar, User, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Calendar, User, Clock, Share2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
@@ -23,6 +23,99 @@ interface BlogPost {
   published?: boolean;
 }
 
+// Topic-specific images from Unsplash - matching the blog listing page
+const TOPIC_IMAGES: Record<string, string[]> = {
+  nutrition: [
+    "https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=1200&h=800&fit=crop&q=80", // Food scale macro tracking
+    "https://images.unsplash.com/photo-1542838132-92c53300491e?w=1200&h=800&fit=crop&q=80", // Fresh vegetables produce
+    "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=1200&h=800&fit=crop&q=80", // Colorful healthy fruits
+    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=1200&h=800&fit=crop&q=80", // Fresh healthy foods
+    "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=1200&h=800&fit=crop&q=80", // Healthy food variety
+    "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&h=800&fit=crop&q=80", // Healthy balanced meal
+    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1200&h=800&fit=crop&q=80", // Fresh healthy ingredients
+    "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&h=800&fit=crop&q=80", // Balanced nutrition meal
+    "https://images.unsplash.com/photo-1505576391880-b3f9d713dc4f?w=1200&h=800&fit=crop&q=80", // Nutrition tracking
+  ],
+  fitness: [
+    "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&h=800&fit=crop&q=80", // Gym workout
+    "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=1200&h=800&fit=crop&q=80", // Weightlifting
+    "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1200&h=800&fit=crop&q=80", // Strength training
+    "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=1200&h=800&fit=crop&q=80", // Fitness equipment
+    "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1200&h=800&fit=crop&q=80", // Crossfit
+    "https://images.unsplash.com/photo-1576678927484-cc907957088c?w=1200&h=800&fit=crop&q=80", // Running
+  ],
+  "meal-planning": [
+    "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&h=800&fit=crop&q=80", // Organized meal prep containers
+    "https://images.unsplash.com/photo-1476718406336-bb5c969678a0?w=1200&h=800&fit=crop&q=80", // Meal prep containers with food
+    "https://images.unsplash.com/photo-1556911220-bff31c812dba?w=1200&h=800&fit=crop&q=80", // Kitchen meal prep setup
+    "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=1200&h=800&fit=crop&q=80", // Meal prep containers organized
+    "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=1200&h=800&fit=crop&q=80", // Meal prep ingredients
+    "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=1200&h=800&fit=crop&q=80", // Meal planning board
+  ],
+  recipes: [
+    "https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=1200&h=800&fit=crop&q=80", // Beautiful plated breakfast
+    "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=1200&h=800&fit=crop&q=80", // Delicious prepared meal
+    "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=1200&h=800&fit=crop&q=80", // Appetizing food presentation
+    "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=1200&h=800&fit=crop&q=80", // Professional food styling
+    "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=1200&h=800&fit=crop&q=80", // Fresh cooking ingredients
+    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1200&h=800&fit=crop&q=80", // Cooking preparation
+  ],
+  default: [
+    "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=1200&h=800&fit=crop&q=80", // Colorful healthy fruits
+    "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&h=800&fit=crop&q=80", // Balanced healthy meal
+    "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=1200&h=800&fit=crop&q=80", // Healthy food variety
+    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=1200&h=800&fit=crop&q=80", // Fresh healthy foods
+  ],
+};
+
+const getImageForPost = (post: BlogPost): string | null => {
+  if (post.thumbnail && post.thumbnail.trim() !== "") {
+    return post.thumbnail;
+  }
+
+  // Determine topic from category (prioritize category over title)
+  const category = (post.category || "").toLowerCase();
+  const title = (post.title || "").toLowerCase();
+  
+  let topic = "default";
+  
+  // Prioritize category matching
+  if (category === "nutrition") {
+    topic = "nutrition";
+  } else if (category === "fitness") {
+    topic = "fitness";
+  } else if (category === "meal-planning" || category === "meal planning") {
+    topic = "meal-planning";
+  } else if (category === "recipes" || category === "recipe") {
+    topic = "recipes";
+  } else {
+    // Fallback to title keywords if category not set
+    if (title.includes("fat") || title.includes("protein") || title.includes("carb") || title.includes("macro") || title.includes("nutrition")) {
+      topic = "nutrition";
+    } else if (title.includes("workout") || title.includes("exercise") || title.includes("training") || title.includes("strength") || title.includes("bulk")) {
+      topic = "fitness";
+    } else if (title.includes("meal") && (title.includes("prep") || title.includes("plan"))) {
+      topic = "meal-planning";
+    } else if (title.includes("recipe") || title.includes("breakfast") || title.includes("cook")) {
+      topic = "recipes";
+    }
+  }
+  
+  const images = TOPIC_IMAGES[topic] || TOPIC_IMAGES.default;
+  // Use slug hash for consistent but varied image selection
+  const hash = post.slug.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const index = hash % images.length;
+  return images[index] || images[0];
+};
+
+// Calculate reading time
+const calculateReadingTime = (content: string): number => {
+  const wordsPerMinute = 200;
+  const text = content.replace(/<[^>]*>/g, ""); // Remove HTML tags
+  const wordCount = text.split(/\s+/).length;
+  return Math.ceil(wordCount / wordsPerMinute);
+};
+
 export default function BlogPostPage() {
   const params = useParams();
   const router = useRouter();
@@ -34,7 +127,6 @@ export default function BlogPostPage() {
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        // Try to find post by slug
         const postsRef = collection(db, "blog");
         const q = query(postsRef, where("slug", "==", slug));
         const querySnapshot = await getDocs(q);
@@ -55,7 +147,6 @@ export default function BlogPostPage() {
             published: data.published !== false,
           });
         } else {
-          // Fallback: try to get by document ID
           const docRef = doc(db, "blog", slug);
           const docSnap = await getDoc(docRef);
           
@@ -92,7 +183,7 @@ export default function BlogPostPage() {
 
   if (loading) {
     return (
-      <div className="bg-black py-20 flex items-center justify-center">
+      <div className="bg-black py-20 flex items-center justify-center min-h-screen">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -107,7 +198,7 @@ export default function BlogPostPage() {
 
   if (notFound || !post) {
     return (
-      <div className="bg-black py-20 flex items-center justify-center">
+      <div className="bg-black py-20 flex items-center justify-center min-h-screen">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -126,165 +217,261 @@ export default function BlogPostPage() {
     );
   }
 
+  const imageUrl = getImageForPost(post);
+  const readingTime = calculateReadingTime(post.content);
+  const hasValidImage = imageUrl && imageUrl.trim() !== "";
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a0a0a] to-[#0a0a0a] py-20 relative overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23FF2E2E' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }} />
+    <div className="min-h-screen bg-gradient-to-b from-[#0a0a0a] via-[#111] to-[#0a0a0a]">
+      {/* Animated Background Pattern */}
+      <div className="fixed inset-0 opacity-5 pointer-events-none">
+        <div 
+          className="absolute inset-0" 
+          style={{
+            backgroundImage: `radial-gradient(circle at 2px 2px, #FF2E2E 1px, transparent 0)`,
+            backgroundSize: "40px 40px",
+          }}
+        />
       </div>
-      
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl relative z-10">
+
+      {/* Hero Section with Image */}
+      <div className="relative w-full h-[60vh] md:h-[70vh] overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-black z-10" />
+        {hasValidImage && (
+          <Image
+            src={imageUrl}
+            alt={post.title}
+            fill
+            className="object-cover"
+            priority
+            sizes="100vw"
+            unoptimized
+          />
+        )}
+        
         {/* Back Button */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4 }}
-          className="mb-8"
+          className="absolute top-6 left-4 md:left-8 z-20"
         >
           <Link href="/blog">
             <Button
               variant="ghost"
-              className="text-gray-300 hover:text-white hover:bg-[#111]"
+              className="bg-black/50 backdrop-blur-md text-white hover:bg-black/70 border border-white/20"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Blog
+              Back
             </Button>
           </Link>
         </motion.div>
 
-        {/* Article */}
-        <motion.article
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="bg-[#111]/80 backdrop-blur-sm border border-[#222]/50 rounded-2xl p-8 md:p-12 shadow-2xl"
-        >
-          {/* Thumbnail */}
-          {post.thumbnail && (
+        {/* Content Overlay */}
+        <div className="absolute inset-0 z-10 flex items-end">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl pb-12 md:pb-16">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-              className="mb-8 rounded-2xl overflow-hidden relative w-full h-[500px] shadow-2xl border-2 border-[#FF2E2E]/20"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-[#FF2E2E]/20 via-transparent to-[#7b0000]/20 z-10" />
-              <Image
-                src={post.thumbnail}
-                alt={post.title}
-                fill
-                className="object-cover"
-                loading="eager"
-                priority
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 896px"
-                unoptimized
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = "none";
-                }}
-              />
+              {post.category && (
+                <span className="inline-block px-4 py-2 bg-[#FF2E2E] text-white text-sm font-bold uppercase tracking-wide rounded-full mb-4 shadow-lg">
+                  {post.category}
+                </span>
+              )}
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 leading-tight drop-shadow-2xl">
+                {post.title}
+              </h1>
+              <div className="flex flex-wrap items-center gap-4 text-white/90 text-sm md:text-base">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>
+                    {new Date(post.date).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span>{post.author}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  <span>{readingTime} min read</span>
+                </div>
+              </div>
             </motion.div>
-          )}
+          </div>
+        </div>
+      </div>
 
-          {/* Category Badge */}
-          {post.category && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="mb-4"
-            >
-              <span className="inline-block px-6 py-3 bg-gradient-to-r from-[#FF2E2E] to-[#CC0000] text-white text-sm font-bold uppercase tracking-wide rounded-full shadow-lg shadow-[#FF2E2E]/30">
-                {post.category}
-              </span>
-            </motion.div>
-          )}
-
-          {/* Title */}
-          <motion.h1
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-white via-gray-100 to-white bg-clip-text text-transparent mb-6 leading-tight"
-          >
-            {post.title}
-          </motion.h1>
-
-          {/* Meta Information */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="flex flex-wrap items-center gap-6 mb-8 text-gray-400"
-          >
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              <span className="text-lg">
-                {new Date(post.date).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              <span className="text-lg">{post.author}</span>
-            </div>
-          </motion.div>
-
-          {/* Description */}
-          {post.description && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="text-xl md:text-2xl text-gray-200 mb-8 leading-relaxed px-4 py-4 bg-gradient-to-r from-[#FF2E2E]/10 via-transparent to-[#FF2E2E]/10 rounded-lg border-l-4 border-[#FF2E2E]"
-            >
-              {post.description}
-            </motion.p>
-          )}
-
-          {/* Content */}
+      {/* Article Content */}
+      <article className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl py-12 md:py-16">
+        {/* Description/Excerpt - Harvard Style */}
+        {post.description && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.6 }}
-            className="prose prose-invert prose-lg max-w-none
-              prose-headings:text-white prose-headings:font-bold
-              prose-h1:text-4xl prose-h1:mb-6 prose-h1:mt-8 prose-h1:text-[#FF2E2E]
-              prose-h2:text-3xl prose-h2:mb-4 prose-h2:mt-6 prose-h2:text-[#FF2E2E]
-              prose-h3:text-2xl prose-h3:mb-3 prose-h3:mt-4 prose-h3:text-[#FF5555]
-              prose-h4:text-xl prose-h4:mb-2 prose-h4:mt-3 prose-h4:text-[#FF7777]
-              prose-p:text-gray-100 prose-p:text-lg prose-p:leading-relaxed prose-p:mb-6
-              prose-a:text-[#FF2E2E] prose-a:no-underline prose-a:font-semibold hover:prose-a:underline hover:prose-a:text-[#FF5555]
-              prose-strong:text-white prose-strong:font-bold
-              prose-ul:text-gray-100 prose-ul:text-lg prose-ul:my-4
-              prose-ol:text-gray-100 prose-ol:text-lg prose-ol:my-4
-              prose-li:my-2 prose-li:text-gray-100
-              prose-blockquote:border-l-4 prose-blockquote:border-[#FF2E2E] prose-blockquote:pl-6 prose-blockquote:pr-4 prose-blockquote:py-4 prose-blockquote:italic prose-blockquote:text-gray-200 prose-blockquote:bg-[#FF2E2E]/5 prose-blockquote:rounded-r-lg
-              prose-code:text-[#FF2E2E] prose-code:bg-[#1a1a1a] prose-code:px-3 prose-code:py-1 prose-code:rounded prose-code:border prose-code:border-[#FF2E2E]/20
-              prose-img:rounded-xl prose-img:my-8 prose-img:shadow-2xl prose-img:border-2 prose-img:border-[#FF2E2E]/20"
-            dangerouslySetInnerHTML={{ __html: post.content }}
-          />
-        </motion.article>
+            transition={{ delay: 0.3 }}
+            className="mb-8"
+          >
+            <p className="text-lg md:text-xl text-gray-300 leading-relaxed italic font-normal">
+              {post.description}
+            </p>
+          </motion.div>
+        )}
 
-        {/* Back to Blog CTA */}
+        {/* Divider */}
+        <div className="border-t border-[#222] my-8"></div>
+
+        {/* Main Content - Clean Harvard Style */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-transparent"
+        >
+          <style dangerouslySetInnerHTML={{ __html: `
+            .blog-content {
+              color: #e5e5e5;
+            }
+            .blog-content p {
+              margin-bottom: 1.5rem;
+              line-height: 1.75;
+              font-size: 1.0625rem;
+            }
+            .blog-content p:first-of-type {
+              font-size: 1.125rem;
+              margin-bottom: 2rem;
+            }
+            .blog-content h2 {
+              margin-top: 2.5rem;
+              margin-bottom: 1.25rem;
+              font-weight: 700;
+              font-size: 1.875rem;
+              line-height: 1.3;
+            }
+            .blog-content h3 {
+              margin-top: 2rem;
+              margin-bottom: 1rem;
+              font-weight: 600;
+              font-size: 1.5rem;
+              line-height: 1.4;
+            }
+            .blog-content h4 {
+              margin-top: 1.5rem;
+              margin-bottom: 0.75rem;
+              font-weight: 600;
+              font-size: 1.25rem;
+            }
+            .blog-content ul,
+            .blog-content ol {
+              margin-top: 1rem;
+              margin-bottom: 1.5rem;
+              padding-left: 1.5rem;
+            }
+            .blog-content ul li,
+            .blog-content ol li {
+              margin-bottom: 0.75rem;
+              line-height: 1.7;
+            }
+            .blog-content ul li {
+              list-style-type: disc;
+            }
+            .blog-content ol li {
+              list-style-type: decimal;
+            }
+            .blog-content strong {
+              font-weight: 700;
+            }
+            .blog-content blockquote {
+              margin: 2rem 0;
+              padding-left: 1.5rem;
+              border-left: 3px solid rgba(255, 46, 46, 0.4);
+              font-style: italic;
+            }
+            .blog-content a {
+              color: #FF2E2E;
+              text-decoration: underline;
+            }
+            .blog-content a:hover {
+              color: #FF5555;
+            }
+          `}}></style>
+          <div 
+            className={`blog-content prose prose-invert prose-lg max-w-none
+              prose-headings:font-bold prose-headings:text-white
+              prose-h1:text-4xl prose-h1:mb-6 prose-h1:mt-0 prose-h1:font-bold
+              prose-h2:text-3xl prose-h2:text-white prose-h2:font-bold
+              prose-h3:text-2xl prose-h3:text-white prose-h3:font-semibold
+              prose-h4:text-xl prose-h4:text-white prose-h4:font-semibold
+              prose-p:text-gray-200 prose-p:font-normal
+              prose-strong:text-white prose-strong:font-bold
+              prose-a:text-[#FF2E2E] prose-a:underline prose-a:font-normal
+              prose-ul:text-gray-200 prose-ul:font-normal
+              prose-ol:text-gray-200 prose-ol:font-normal
+              prose-li:text-gray-200 prose-li:font-normal
+              prose-blockquote:text-gray-300 prose-blockquote:font-normal
+              prose-code:text-[#FF2E2E] prose-code:bg-[#1a1a1a] prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:font-mono
+              prose-pre:bg-[#0a0a0a] prose-pre:border prose-pre:border-[#222] prose-pre:rounded-lg prose-pre:p-4 prose-pre:overflow-x-auto
+              prose-img:rounded-lg prose-img:my-8 prose-img:shadow-lg prose-img:border prose-img:border-[#222] 
+                prose-img:w-full prose-img:h-auto
+              prose-hr:border-[#222] prose-hr:my-8
+              prose-table:text-gray-200 prose-table:border-collapse prose-table:w-full
+              prose-th:border prose-th:border-[#222] prose-th:bg-[#1a1a1a] prose-th:px-4 prose-th:py-2 prose-th:text-left prose-th:font-bold prose-th:text-white
+              prose-td:border prose-td:border-[#222] prose-td:px-4 prose-td:py-2 prose-td:bg-[#111]/50`}
+            dangerouslySetInnerHTML={{ __html: post.content }}
+            style={{
+              fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+            }}
+          />
+        </motion.div>
+
+        {/* Share Section */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
-          className="mt-12 pt-8 border-t border-[#222]"
+          className="mt-16 pt-8 border-t border-[#222]"
         >
-          <Link href="/blog">
-            <Button className="bg-[#FF2E2E] hover:bg-[#CC0000] text-white text-lg px-8 py-6">
-              <ArrowLeft className="mr-2 h-5 w-5" />
-              Back to All Articles
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 text-gray-400">
+              <Share2 className="h-5 w-5" />
+              <span className="text-sm">Share this article</span>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="border-[#222] text-gray-300 hover:bg-[#111] hover:text-white"
+                onClick={() => {
+                  if (navigator.share) {
+                    navigator.share({
+                      title: post.title,
+                      text: post.description,
+                      url: window.location.href,
+                    });
+                  } else {
+                    navigator.clipboard.writeText(window.location.href);
+                    alert("Link copied to clipboard!");
+                  }
+                }}
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
+              </Button>
+              <Link href="/blog">
+                <Button className="bg-[#FF2E2E] hover:bg-[#CC0000] text-white">
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  More Articles
+                </Button>
+              </Link>
+            </div>
+          </div>
         </motion.div>
-      </div>
+      </article>
     </div>
   );
 }

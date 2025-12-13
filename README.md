@@ -70,7 +70,7 @@ A professional, interactive platform offering human-created custom meal plans to
    RESEND_API_KEY=your_key
 
    # Admin
-   ADMIN_EMAIL=admin@macrominded.com
+   ADMIN_EMAIL=support@macrominded.net
 
    # App
    NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -162,5 +162,5 @@ Private - All rights reserved
 
 ## 🤝 Support
 
-For support, email info@macrominded.com or use the contact form on the website.
+For support, email support@macrominded.net or use the contact form on the website.
 

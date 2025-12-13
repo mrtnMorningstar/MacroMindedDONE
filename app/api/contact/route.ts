@@ -14,8 +14,8 @@ export async function POST(request: NextRequest) {
 
     // Send email via Resend
     await resend.emails.send({
-      from: "MacroMinded <onboarding@resend.dev>",
-      to: process.env.ADMIN_EMAIL || "admin@macrominded.com",
+      from: "MacroMinded <support@macrominded.net>",
+      to: process.env.ADMIN_EMAIL || "support@macrominded.net",
       replyTo: email,
       subject: `New Contact Form Message from ${name}`,
       html: `
